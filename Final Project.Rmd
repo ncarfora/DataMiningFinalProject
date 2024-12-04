@@ -1,0 +1,189 @@
+---
+title: "Final Project"
+author: "Jay Powell, Nikki Carfora"
+date: "2024-12-04"
+output: html_document
+---
+# Customer Retention Analysis
+
+## Introduction
+This section introduces the business problem, the dataset used, and the goals of the analysis. It briefly explains the significance of customer retention for the telecom industry.
+
+## Packages Required
+Here are the packages used in our analysis, including a short description of each:
+
+* tidymodels: For building and validating machine learning models.
+* tidyverse: For data manipulation and visualization.
+* baguette: For bagged tree models.
+* vip: For assessing variable importance in models.
+* pdp: For creating partial dependence plots.
+* kernlab: For kernel-based methods.
+* ggplot2: For data visualization.
+```{r, message = FALSE, warning = FALSE}
+# Loading Required Libraries
+  library(tidymodels)
+  library(tidyverse)
+  library(baguette)
+  library(vip)
+  library(pdp)
+  library(kernlab)
+  library(ggplot2)
+```
+
+## Data Preparation
+We begin by importing the dataset and exploring its structure to identify potential data quality issues or necessary transformations.
+```{r}
+# Importing the dataset
+customer_retention <- read.csv("Data/customer_retention.csv")
+
+# Viewing the first few rows of the dataset
+head(customer_retention)
+
+# Checking the structure of the dataset
+str(customer_retention)
+
+# Summary statistics of the dataset
+summary(customer_retention)
+```
+
+The column TotalCharges contains 11 missing values. We omit these rows to ensure data quality for our analysis.
+```{r}
+# Identifying missing values
+colSums(is.na(customer_retention))
+
+# Removing rows with missing values
+customer_retention <- na.omit(customer_retention)
+
+# Confirming all missing values have been removed
+sum(is.na(customer_retention))
+```
+
+To prevent issues during analysis, we ensure that categorical variables are consistent and have no unexpected levels.
+```{r}
+unique(customer_retention$Status)
+unique(customer_retention$Gender)
+unique(customer_retention$SeniorCitizen)
+unique(customer_retention$Partner)
+unique(customer_retention$Dependents)
+unique(customer_retention$InternetService)
+unique(customer_retention$OnlineSecurity)
+unique(customer_retention$OnlineBackup)
+unique(customer_retention$DeviceProtection)
+unique(customer_retention$TechSupport)
+unique(customer_retention$StreamingTV)
+unique(customer_retention$StreamingMovies)
+unique(customer_retention$Contract)
+unique(customer_retention$PaperlessBilling)
+```
+We split the dataset into training (70%) and test (30%) sets, ensuring stratified sampling to maintain the balance of Status in both sets.
+```{r}
+# Splitting the dataset
+set.seed(123)
+retention_split <- initial_split(customer_retention, prop = 0.7, strata = "Status")
+retention_train <- training(retention_split)
+retention_test <- testing(retention_split)
+
+# Checking dimensions of the splits
+dim(retention_train)
+dim(retention_test)
+```
+
+## Exploratory Data Analysis
+### Overview of Target Variable
+The Status variable indicates whether a customer is currently retained (Current) or has left (Left). Below is the distribution of the target variable in the dataset.
+```{r}
+table(customer_retention$Status)
+prop.table(table(customer_retention$Status))
+```
+Explanation here
+
+### Continuous Variables
+#### Tenure Distribution
+Why we graphed this
+```{r}
+cust_tenure <- ggplot(customer_retention, aes(x = Tenure)) +
+  geom_histogram(binwidth = 5, fill = "blue") +
+  labs(title = "Distribution of Customer Tenure", x = "Months", y = "Count")
+cust_tenure
+```
+
+Tenure graph explanation goes here.
+
+#### Monthly Charges
+Why we graphed this
+```{r}
+monthly_charges <- ggplot(customer_retention, aes(x = MonthlyCharges)) +
+  geom_histogram(binwidth = 3, fill = "darkred") +
+  labs(title = "Distribution of Monthly Charges", x = "Amount Billed ($)", y = "Count")
+monthly_charges
+```
+
+Graph Explanation Here
+
+### Categorical Variables
+#### Internet Service
+Why we graphed this
+```{r}
+internet_service <- ggplot(customer_retention, aes(x = InternetService)) +
+  geom_bar(fill = "blue") +
+  labs(title = "Internet Service Distribution", x = "Internet Service", y = "Count")
+internet_service
+```
+
+Explanation of the graph
+
+#### Senior Citizens
+Why we graphed this
+```{r}
+senior_citizen <- ggplot(customer_retention, aes(x = SeniorCitizen)) +
+  geom_bar(fill = "green") +
+  labs(title = "Senior Citizen Distribution", x = "Senior Citizen", y = "Count")
+senior_citizen
+```
+
+Explanation of the graph
+
+### Relationships Between Variables
+#### Tenure vs. Internet Service
+Why we graphed this
+```{r}
+tenure_service <- ggplot(customer_retention, aes(x = InternetService, y = Tenure)) +
+  geom_boxplot(fill = "orange") +
+  labs(title = "Tenure by Internet Service Type", x = "Internet Service", y = "Tenure")
+tenure_service
+```
+
+Explanation of the graph
+
+#### Demographics and Service
+Why we graphed this
+```{r}
+senior_service <- ggplot(customer_retention, aes(x = SeniorCitizen, fill = InternetService)) +
+  geom_bar(position = "dodge") +
+  theme_minimal()
+senior_service
+```
+
+Explanation of the graph
+
+#### Tenure vs Status
+Why we graphed this
+```{r}
+tenure_status <- ggplot(customer_retention, aes(x = Status, y = Tenure)) +
+  geom_boxplot(fill = "purple") +
+  theme_minimal()
+tenure_status
+```
+
+Explanation of the graph
+
+#### Monthly Charge vs Status
+Why we graphed this
+```{r}
+monthly_status <- ggplot(customer_retention, aes(x = Status, y = MonthlyCharges)) +
+  geom_boxplot(fill = "red") +
+  theme_minimal()
+monthly_status
+```
+
+Explanation of the graph
