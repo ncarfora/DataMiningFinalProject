@@ -6,10 +6,10 @@ output: html_document
 ---
 # Customer Retention Analysis
 
-## Introduction
+## Introduction {.tabset}
 This section introduces the business problem, the dataset used, and the goals of the analysis. It briefly explains the significance of customer retention for the telecom industry.
 
-## Packages Required
+## Data Prep
 Here are the packages used in our analysis, including a short description of each:
 
 * tidymodels: For building and validating machine learning models.
@@ -30,7 +30,7 @@ Here are the packages used in our analysis, including a short description of eac
   library(ggplot2)
 ```
 
-## Data Preparation
+## Data Preparation {.tabset}
 We begin by importing the dataset and exploring its structure to identify potential data quality issues or necessary transformations.
 ```{r}
 # Importing the dataset
@@ -88,7 +88,7 @@ dim(retention_train)
 dim(retention_test)
 ```
 
-## Exploratory Data Analysis
+## Exploratory Data Analysis {.tabset}
 ### Overview of Target Variable
 The Status variable indicates whether a customer is currently retained (Current) or has left (Left). Below is the distribution of the target variable in the dataset.
 ```{r}
