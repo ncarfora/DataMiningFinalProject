@@ -95,79 +95,74 @@ The Status variable indicates whether a customer is currently retained (Current)
 table(customer_retention$Status)
 prop.table(table(customer_retention$Status))
 ```
-Explanation here
+The majority of customers (73.4%) are current, while just over a quarter (26.6%) have left the service. 
 
 ### Continuous Variables
 #### Tenure Distribution
-Why we graphed this
+We first explored the distribution of tenure among our customer base, both current and past.
 ```{r}
-cust_tenure <- ggplot(customer_retention, aes(x = Tenure)) +
-  geom_histogram(binwidth = 5, fill = "blue") +
-  labs(title = "Distribution of Customer Tenure", x = "Months", y = "Count")
+cust_tenure <- ggplot(customer_retention, aes(x = Tenure, fill = Status)) +
+  geom_histogram(binwidth = 5) + 
+  theme_grey() +
+  scale_x_continuous(n.breaks=10)+
+  labs(title = "Customer Tenure", x = "Number of Months Kept", y = "Count of Instances",)
 cust_tenure
 ```
 
-Tenure graph explanation goes here.
+It seems that of the current customer base, the majority have either just joined in the last few months, or have been with the service since the beginning. This could be because the service offered a special deal upon startup that customers had been grandfathered into for those who have been long-standing customers. Those who have left the service departed within the first few months, and many of the current ones are new as well, suggesting there could be a promotion for the first ~6 months of the contract that attracts people, and they may choose to switch services once the promotion is up. 
 
 #### Monthly Charges
-Why we graphed this
+In addition to the tenure, we explored monthly charges to understand why customers may leave or stay with the service. 
 ```{r}
-monthly_charges <- ggplot(customer_retention, aes(x = MonthlyCharges)) +
-  geom_histogram(binwidth = 3, fill = "darkred") +
-  labs(title = "Distribution of Monthly Charges", x = "Amount Billed ($)", y = "Count")
+monthly_charges<- ggplot(customer_retention, aes(x = MonthlyCharges, fill = Status)) +
+  geom_histogram(binwidth = 3) +
+  theme_grey() +
+  scale_x_continuous(n.breaks=10)+
+  labs(title = "Customer Monthly Charges", x = "Amount Billed ($)", y = "Count of Instances")
 monthly_charges
 ```
 
-Graph Explanation Here
+In this graph, we find that most of the current customers are being charged around $20/month. If we analyze this in tandem with the previous tenure graph, we can conclude there is some sort of promotion for new members that offers the lower price. Many of the customers who left the service began doing so around the $70/month mark, which we may need to consider in our pricing strategy. 
 
 ### Categorical Variables
 #### Internet Service
-Why we graphed this
+We graphed the internet service variable to help understand why customers may be leaving, and if it had to do with their type of internet service.
 ```{r}
-internet_service <- ggplot(customer_retention, aes(x = InternetService)) +
-  geom_bar(fill = "blue") +
-  labs(title = "Internet Service Distribution", x = "Internet Service", y = "Count")
+internet_service <- ggplot(customer_retention, aes(x = InternetService, fill = Status)) + 
+  geom_bar() +
+  theme_minimal()+
+  labs(x = "Internet Service", y = "Count", title = "Status by Internet Service Type")
 internet_service
 ```
-
-Explanation of the graph
+In doing this, we found that the majority of customers who left had fiber optic cables as their internet service. We may need to look into enhancing or changing our approach for our fiber optic customers to increase retention. 
 
 #### Senior Citizens
-Why we graphed this
+We looked at the demographics of our customer base and found that the distribution between male and female identifying customers were fairly even, so we decided to explore the general age of our customer base. 
 ```{r}
-senior_citizen <- ggplot(customer_retention, aes(x = SeniorCitizen)) +
-  geom_bar(fill = "green") +
-  labs(title = "Senior Citizen Distribution", x = "Senior Citizen", y = "Count")
+senior_citizen <- ggplot(customer_retention, aes(x = SeniorCitizen, fill = Status)) + 
+  geom_bar() +
+  theme_minimal()+
+  labs(x = "Senior Status", y = "Count", title = "Customers vs Senior Citizen Status")
 senior_citizen
 ```
-
-Explanation of the graph
+Most of the customers, both current and past, have not identified as senior citizens. This could help us in marketing strategies in the future, as we can better cater to our larger base, but know we can work to improve how our service could be advertised to and fit for senior citizens. 
 
 ### Relationships Between Variables
-#### Tenure vs. Internet Service
-Why we graphed this
-```{r}
-tenure_service <- ggplot(customer_retention, aes(x = InternetService, y = Tenure)) +
-  geom_boxplot(fill = "orange") +
-  labs(title = "Tenure by Internet Service Type", x = "Internet Service", y = "Tenure")
-tenure_service
-```
-
-Explanation of the graph
 
 #### Demographics and Service
-Why we graphed this
+Because the non-senior citizen status was so significant in our demographic, we decided to analyze the differnt services between age groups to understand how our service could better fit the senior citizen group. 
 ```{r}
 senior_service <- ggplot(customer_retention, aes(x = SeniorCitizen, fill = InternetService)) +
   geom_bar(position = "dodge") +
-  theme_minimal()
+  theme_minimal()+
+  labs(x = "Senior Status", y = "Count", title = "Relationship between Age and Internet Service Type")
 senior_service
 ```
 
-Explanation of the graph
+Both the senior and non-senior demographics utlizie the fiber optic services for their internet, so Regork may want to focus on potentially enhancing their services for the DSL to gain a larger base from the senior citizens, but make sure they fortify the service they do provide in conjunction with fiber optic, as that seems to be the most popular among the graphs. 
 
 #### Tenure vs Status
-Why we graphed this
+This graph helps us to better visualize the range of those staying with the service vs leaving it. 
 ```{r}
 tenure_status <- ggplot(customer_retention, aes(x = Status, y = Tenure)) +
   geom_boxplot(fill = "purple") +
@@ -175,10 +170,10 @@ tenure_status <- ggplot(customer_retention, aes(x = Status, y = Tenure)) +
 tenure_status
 ```
 
-Explanation of the graph
+Most of the customers that leave do so in under 30 months of commitment, with the mean being around 10 months. Regork can look at what promotions or incentives they can offer around the 10 month mark to increase the perceived value of their service and hopefully retain more customers. 
 
 #### Monthly Charge vs Status
-Why we graphed this
+We watned to get a better understanding of the costs related to customers leaving the service and the effect the price range may have on the retention. 
 ```{r}
 monthly_status <- ggplot(customer_retention, aes(x = Status, y = MonthlyCharges)) +
   geom_boxplot(fill = "red") +
@@ -186,4 +181,4 @@ monthly_status <- ggplot(customer_retention, aes(x = Status, y = MonthlyCharges)
 monthly_status
 ```
 
-Explanation of the graph
+The customers who have left were generally charged more than those who have stayed, paying an average of around $80/month. If Regork can determine why those costs were not associated with perceived value, they may be able to better retain that customer group. 
