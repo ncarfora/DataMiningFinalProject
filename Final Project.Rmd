@@ -4,12 +4,12 @@ author: "Jay Powell, Nikki Carfora"
 date: "2024-12-04"
 output: html_document
 ---
-# Customer Retention Analysis
+# Customer Retention Analysis {.tabset}
 
 ## Introduction {.tabset}
 This section introduces the business problem, the dataset used, and the goals of the analysis. It briefly explains the significance of customer retention for the telecom industry.
 
-## Data Prep
+## Required Packages
 Here are the packages used in our analysis, including a short description of each:
 
 * tidymodels: For building and validating machine learning models.
@@ -30,9 +30,9 @@ Here are the packages used in our analysis, including a short description of eac
   library(ggplot2)
 ```
 
-## Data Preparation {.tabset}
+## Data Preparation  {.tabset}
 We begin by importing the dataset and exploring its structure to identify potential data quality issues or necessary transformations.
-```{r}
+```{r results='hide'}
 # Importing the dataset
 customer_retention <- read.csv("Data/customer_retention.csv")
 
@@ -59,7 +59,7 @@ sum(is.na(customer_retention))
 ```
 
 To prevent issues during analysis, we ensure that categorical variables are consistent and have no unexpected levels.
-```{r}
+```{r results='hide'}
 unique(customer_retention$Status)
 unique(customer_retention$Gender)
 unique(customer_retention$SeniorCitizen)
