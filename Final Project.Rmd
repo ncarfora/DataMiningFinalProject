@@ -182,3 +182,62 @@ monthly_status
 ```
 
 The customers who have left were generally charged more than those who have stayed, paying an average of around $80/month. If Regork can determine why those costs were not associated with perceived value, they may be able to better retain that customer group. 
+
+## Machine Learning Analysis {.tabset}
+### Predicting Likelihood of Churn
+This section focuses on predicting customer churn using logistic regression, incorporating customer demographics, contract types, and service usage as predictors. Accurately identifying customers likely to churn allows Regork to take targeted retention actions, such as offering incentives, to mitigate potential losses.
+
+```{r}
+set.seed(123)
+kfold <- vfold_cv(retention_train, v = 5, strata = "Status")
+```
+
+To ensure the model is reliable, I used cross-validation, a method that splits the data into smaller subsets for testing and training multiple times. This helps check how well the model performs.
+
+```{r}
+results <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit_resamples(Status ~ ., resamples = kfold)
+```
+
+I used logistic regression to predict churn. This model analyzes how various customer factors contribute to the likelihood of leaving.
+
+```{r}
+collect_metrics(results) %>%
+  filter(.metric == "accuracy")
+```
+
+On average, the model correctly predicts customer churn about 80% of the time. Its performance is consistent, showing little variation.
+
+```{r}
+final_fit <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(Status ~ ., data = retention_train)
+
+tidy(final_fit)
+```
+
+Key findings:
+
+* Customers on longer contracts are far less likely to leave, making these contracts a strong retention tool.
+* Fiber optic internet users are likelier to leave, suggesting dissatisfaction or competitive pressures.
+* Higher charges slightly increase the likelihood of churn, though the effect is small.
+* Senior citizens are slightly more likely to leave, suggesting this demographic might need targeted retention efforts.
+
+```{r}
+final_fit %>%
+  predict(retention_test) %>%
+  bind_cols(retention_test %>% select(Status)) %>%
+  conf_mat(truth = Status, estimate = .pred_class)
+```
+
+The model does a good job of predicting customer behavior overall. However:
+
+* It occasionally misses churners (225 cases), which represents lost opportunities to intervene.
+* It also predicts churn for some customers who actually stayed (178 cases), which could result in unnecessary retention efforts.
+
+```{r}
+vip::vip(final_fit)
+```
+
+The most important factors in predicting churn are contract length and how long customers have been with the company. Other influential factors include billing methods, service preferences, and spending habits. These insights can guide Regork’s retention strategies.
