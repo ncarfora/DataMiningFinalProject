@@ -241,3 +241,113 @@ vip::vip(final_fit)
 ```
 
 The most important factors in predicting churn are contract length and how long customers have been with the company. Other influential factors include billing methods, service preferences, and spending habits. These insights can guide Regork’s retention strategies.
+
+### Predicting High-Risk Customer Churn
+In this section, we use a random forest model to identify customers at high risk of churn—those with a churn probability greater than 70%. This allows Regork to take targeted actions to retain these customers and reduce revenue loss.
+
+```{r}
+# Create the recipe
+model_recipe <- recipe(Status ~ ., data = retention_train)
+
+# Create the Random Forest model object
+rf_mod <- rand_forest(
+  mode = "classification",
+  trees = tune(),
+  mtry = tune(),
+  min_n = tune()
+) %>%
+  set_engine("ranger", importance = "impurity")
+
+# Cross-validation setup
+set.seed(123)
+kfold <- vfold_cv(retention_train, v = 5, strata = "Status")
+
+```
+
+We started by preparing the random forest model and setting up a cross-validation process. This method ensures that the model is tested multiple times on different subsets of the data, helping to assess its reliability and performance
+
+```{r}
+rf_hyper_grid <- grid_regular(
+  trees(range = c(50, 800)),
+  mtry(range = c(2, 19)),
+  min_n(range = c(1, 20)),
+  levels = 5
+)
+```
+
+Next, we created a grid of hyperparameter combinations. Hyperparameters (e.g., number of trees, number of variables used per split) affect how well the model predicts churn. This grid allows the model to test multiple settings to find the best combination.
+
+```{r}
+set.seed(123)
+rf_results <- tune_grid(
+  rf_mod,
+  model_recipe,
+  resamples = kfold,
+  grid = rf_hyper_grid,
+  metrics = metric_set(accuracy, roc_auc, mn_log_loss)
+)
+```
+
+We tuned the model by testing all combinations of hyperparameters from the grid. The model was evaluated on metrics such as accuracy and ROC AUC, which measure its ability to distinguish between churners and non-churners.
+
+```{r}
+# Show the best hyperparameters based on ROC AUC
+show_best(rf_results, metric = "roc_auc")
+
+# Select the best hyperparameters
+rf_best_hyperparameters <- select_best(rf_results, metric = "roc_auc")
+```
+
+After tuning, we identified the best-performing hyperparameters based on the ROC AUC metric. These parameters were then used to finalize the random forest model.
+
+```{r}
+# Create the final workflow with the best hyperparameters
+final_rf_wf <- workflow() %>%
+  add_recipe(model_recipe) %>%
+  add_model(rf_mod) %>%
+  finalize_workflow(rf_best_hyperparameters)
+
+# Fit the final model to the training data
+rf_final_fit <- final_rf_wf %>%
+  fit(data = retention_train)
+```
+
+The finalized model was trained on the complete training dataset, using the best settings determined during the tuning process.
+
+```{r}
+# Make predictions with probabilities and classes
+rf_predictions <- predict(rf_final_fit, new_data = retention_test, type = "prob") %>%
+  bind_cols(predict(rf_final_fit, new_data = retention_test, type = "class")) %>%
+  bind_cols(retention_test)
+
+# Filter high-risk customers
+high_risk_customers <- rf_predictions %>%
+  filter(.pred_Left > 0.7)
+
+# Metrics for high-risk predictions
+high_risk_metrics <- high_risk_customers %>%
+  metrics(truth = Status, estimate = .pred_class)
+
+print(high_risk_metrics)
+```
+
+The model was then used to predict churn probabilities for the test dataset. We focused on customers with a churn probability greater than 70% (high risk). The predictions were 86% accurate for this group, demonstrating strong reliability in identifying high-risk churners.
+
+```{r}
+# Plot variable importance
+rf_final_fit %>%
+  extract_fit_parsnip() %>%
+  vip(num_features = 10) +
+  labs(
+    title = "Top 10 Features Influencing High-Risk Customer Churn",
+    x = "Feature",
+    y = "Importance"
+  ) +
+  theme_minimal()
+```
+
+Finally, we examined the key factors influencing churn risk using variable importance. The top drivers include:
+
+1. Tenure: Shorter tenure is associated with higher churn risk.
+2. Total Charges: Customers with higher total charges are more likely to leave.
+3. Contract Type: Month-to-month contracts increase churn likelihood.
