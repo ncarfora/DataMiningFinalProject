@@ -246,10 +246,8 @@ The most important factors in predicting churn are contract length and how long 
 In this section, we use a random forest model to identify customers at high risk of churn—those with a churn probability greater than 70%. This allows Regork to take targeted actions to retain these customers and reduce revenue loss.
 
 ```{r}
-# Create the recipe
 model_recipe <- recipe(Status ~ ., data = retention_train)
 
-# Create the Random Forest model object
 rf_mod <- rand_forest(
   mode = "classification",
   trees = tune(),
@@ -258,7 +256,6 @@ rf_mod <- rand_forest(
 ) %>%
   set_engine("ranger", importance = "impurity")
 
-# Cross-validation setup
 set.seed(123)
 kfold <- vfold_cv(retention_train, v = 5, strata = "Status")
 
@@ -291,23 +288,19 @@ rf_results <- tune_grid(
 We tuned the model by testing all combinations of hyperparameters from the grid. The model was evaluated on metrics such as accuracy and ROC AUC, which measure its ability to distinguish between churners and non-churners.
 
 ```{r}
-# Show the best hyperparameters based on ROC AUC
 show_best(rf_results, metric = "roc_auc")
 
-# Select the best hyperparameters
 rf_best_hyperparameters <- select_best(rf_results, metric = "roc_auc")
 ```
 
 After tuning, we identified the best-performing hyperparameters based on the ROC AUC metric. These parameters were then used to finalize the random forest model.
 
 ```{r}
-# Create the final workflow with the best hyperparameters
 final_rf_wf <- workflow() %>%
   add_recipe(model_recipe) %>%
   add_model(rf_mod) %>%
   finalize_workflow(rf_best_hyperparameters)
 
-# Fit the final model to the training data
 rf_final_fit <- final_rf_wf %>%
   fit(data = retention_train)
 ```
@@ -315,16 +308,13 @@ rf_final_fit <- final_rf_wf %>%
 The finalized model was trained on the complete training dataset, using the best settings determined during the tuning process.
 
 ```{r}
-# Make predictions with probabilities and classes
 rf_predictions <- predict(rf_final_fit, new_data = retention_test, type = "prob") %>%
   bind_cols(predict(rf_final_fit, new_data = retention_test, type = "class")) %>%
   bind_cols(retention_test)
 
-# Filter high-risk customers
 high_risk_customers <- rf_predictions %>%
   filter(.pred_Left > 0.7)
 
-# Metrics for high-risk predictions
 high_risk_metrics <- high_risk_customers %>%
   metrics(truth = Status, estimate = .pred_class)
 
@@ -334,7 +324,6 @@ print(high_risk_metrics)
 The model was then used to predict churn probabilities for the test dataset. We focused on customers with a churn probability greater than 70% (high risk). The predictions were 86% accurate for this group, demonstrating strong reliability in identifying high-risk churners.
 
 ```{r}
-# Plot variable importance
 rf_final_fit %>%
   extract_fit_parsnip() %>%
   vip(num_features = 10) +
