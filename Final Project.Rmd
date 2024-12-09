@@ -185,14 +185,14 @@ The customers who have left were generally charged more than those who have stay
 
 ## Machine Learning Analysis {.tabset}
 ### Predicting Likelihood of Churn
-This section focuses on predicting customer churn using logistic regression, incorporating customer demographics, contract types, and service usage as predictors. Accurately identifying customers likely to churn allows Regork to take targeted retention actions, such as offering incentives, to mitigate potential losses.
+In this section, we use a logistic regression model to predict customer churn. By analyzing factors such as customer demographics, service usage, and billing methods, the model identifies which variables are most influential in predicting whether a customer will churn. This allows us to prioritize retention efforts effectively.
 
 ```{r}
 set.seed(123)
 kfold <- vfold_cv(retention_train, v = 5, strata = "Status")
 ```
 
-To ensure the model is reliable, I used cross-validation, a method that splits the data into smaller subsets for testing and training multiple times. This helps check how well the model performs.
+To ensure the model performs reliably, we divided the data into smaller subsets and tested the model on different portions of the data. This approach gives a clearer picture of how well the model will work in real-world scenarios.
 
 ```{r}
 results <- logistic_reg() %>%
@@ -200,29 +200,22 @@ results <- logistic_reg() %>%
   fit_resamples(Status ~ ., resamples = kfold)
 ```
 
-I used logistic regression to predict churn. This model analyzes how various customer factors contribute to the likelihood of leaving.
+The model was trained using all available customer data, including demographics, contract details, and service preferences. This allows us to determine which factors most influence customer decisions to leave or stay.
 
 ```{r}
 collect_metrics(results) %>%
   filter(.metric == "accuracy")
 ```
 
-On average, the model correctly predicts customer churn about 80% of the time. Its performance is consistent, showing little variation.
+The model correctly predicts whether a customer will churn approximately 80% of the time. This accuracy ensures that the model provides valuable insights into customer behavior without being overly complex.
 
 ```{r}
 final_fit <- logistic_reg() %>%
   set_engine("glm") %>%
   fit(Status ~ ., data = retention_train)
-
-tidy(final_fit)
 ```
 
-Key findings:
-
-* Customers on longer contracts are far less likely to leave, making these contracts a strong retention tool.
-* Fiber optic internet users are likelier to leave, suggesting dissatisfaction or competitive pressures.
-* Higher charges slightly increase the likelihood of churn, though the effect is small.
-* Senior citizens are slightly more likely to leave, suggesting this demographic might need targeted retention efforts.
+We trained the logistic regression model on the entire training dataset to finalize it.
 
 ```{r}
 final_fit %>%
@@ -231,19 +224,23 @@ final_fit %>%
   conf_mat(truth = Status, estimate = .pred_class)
 ```
 
-The model does a good job of predicting customer behavior overall. However:
-
-* It occasionally misses churners (225 cases), which represents lost opportunities to intervene.
-* It also predicts churn for some customers who actually stayed (178 cases), which could result in unnecessary retention efforts.
+When applied to new data, the model continued to perform well. While it correctly identifies many customers likely to leave, it does occasionally miss some (false negatives) and predicts churn for a few customers who stay (false positives). These predictions can guide retention efforts, but care must be taken to avoid unnecessary interventions.
 
 ```{r}
 vip::vip(final_fit)
 ```
 
-The most important factors in predicting churn are contract length and how long customers have been with the company. Other influential factors include billing methods, service preferences, and spending habits. These insights can guide Regork’s retention strategies.
+After finalizing the model, we identified the factors most associated with churn:
+
+* Contract Length: Customers on shorter contracts, such as month-to-month, are more likely to leave.
+* Internet Service Type: Fiber optic users are at higher risk, potentially due to service quality concerns or competition.
+* Monthly Charges: Higher bills slightly increase the risk of churn.
+These findings align with our earlier data analysis and provide a foundation for targeted strategies.
+
+The logistic regression model provides valuable insights into the linear relationships between predictors and churn. Its simplicity makes it an excellent starting point for understanding churn patterns. However, its linear nature might miss complex interactions between variables, which more advanced models like random forests can capture.
 
 ### Predicting High-Risk Customer Churn
-In this section, we use a random forest model to identify customers at high risk of churn—those with a churn probability greater than 70%. This allows Regork to take targeted actions to retain these customers and reduce revenue loss.
+In this section, we use a random forest model to predict which customers are at the highest risk of churn (probability > 70%). By identifying these customers, Regork Telecom can implement targeted retention strategies, focusing efforts where they are most needed.
 
 ```{r}
 model_recipe <- recipe(Status ~ ., data = retention_train)
@@ -261,7 +258,7 @@ kfold <- vfold_cv(retention_train, v = 5, strata = "Status")
 
 ```
 
-We started by preparing the random forest model and setting up a cross-validation process. This method ensures that the model is tested multiple times on different subsets of the data, helping to assess its reliability and performance
+To build the random forest model, we prepared a recipe using all available predictors, including customer demographics, contract types, and service usage. Cross-validation ensures the model performs reliably across various data subsets, providing consistent results.
 
 ```{r}
 rf_hyper_grid <- grid_regular(
@@ -272,7 +269,7 @@ rf_hyper_grid <- grid_regular(
 )
 ```
 
-Next, we created a grid of hyperparameter combinations. Hyperparameters (e.g., number of trees, number of variables used per split) affect how well the model predicts churn. This grid allows the model to test multiple settings to find the best combination.
+We created a grid of potential hyperparameter values, allowing the model to test various settings for the number of trees, predictors per split, and minimum node size. Optimizing these values ensures the model is both accurate and efficient.
 
 ```{r}
 set.seed(123)
@@ -285,7 +282,7 @@ rf_results <- tune_grid(
 )
 ```
 
-We tuned the model by testing all combinations of hyperparameters from the grid. The model was evaluated on metrics such as accuracy and ROC AUC, which measure its ability to distinguish between churners and non-churners.
+The model was trained and evaluated across multiple folds using the hyperparameter grid. Metrics such as ROC AUC help us determine how well the model distinguishes between churners and non-churners, ensuring reliable predictions.
 
 ```{r}
 show_best(rf_results, metric = "roc_auc")
@@ -293,7 +290,7 @@ show_best(rf_results, metric = "roc_auc")
 rf_best_hyperparameters <- select_best(rf_results, metric = "roc_auc")
 ```
 
-After tuning, we identified the best-performing hyperparameters based on the ROC AUC metric. These parameters were then used to finalize the random forest model.
+The best-performing model was selected based on the ROC AUC metric. This ensures the final model focuses on accurately predicting high-risk churners, which is critical for targeted interventions.
 
 ```{r}
 final_rf_wf <- workflow() %>%
@@ -305,7 +302,7 @@ rf_final_fit <- final_rf_wf %>%
   fit(data = retention_train)
 ```
 
-The finalized model was trained on the complete training dataset, using the best settings determined during the tuning process.
+Using the best hyperparameter settings, we trained the final random forest model on the entire training dataset. This model captures complex relationships and non-linear interactions between predictors, which were less visible in the linear regression model.
 
 ```{r}
 rf_predictions <- predict(rf_final_fit, new_data = retention_test, type = "prob") %>%
@@ -337,6 +334,122 @@ rf_final_fit %>%
 
 Finally, we examined the key factors influencing churn risk using variable importance. The top drivers include:
 
-1. Tenure: Shorter tenure is associated with higher churn risk.
-2. Total Charges: Customers with higher total charges are more likely to leave.
-3. Contract Type: Month-to-month contracts increase churn likelihood.
+* Tenure: Shorter tenure is associated with higher churn risk.
+* Total Charges: Customers with higher total charges are more likely to leave.
+* Contract Type: Month-to-month contracts increase churn likelihood.
+These insights align with earlier graphs, such as tenure distribution and monthly charges, and provide Regork with clear priorities for improving customer retention.
+
+The feature importance graph underscores the need for targeted retention efforts. Customers in the first year of service, particularly on month-to-month plans, should receive personalized offers to prevent churn. Addressing these pain points with promotions or improved service quality can yield significant retention benefits.
+
+### Which Demographic Groups are Most Likely to Churn?
+This section focuses on predicting churn likelihood based on demographic variables such as Gender, Senior Citizen, Partner, and Dependents. By understanding the demographic groups most at risk of leaving, Regork Telecom can tailor retention strategies to these customers effectively. 
+
+```{r}
+dt_mod <- decision_tree(
+  mode = "classification"
+) %>%
+  set_engine("rpart")
+
+model_recipe <- recipe(Status ~ Gender + SeniorCitizen + Partner + Dependents, data = retention_train)
+```
+We begin by building a simple decision tree model to explore the relationships between demographic variables and churn. These features were selected based on their potential impact on customer behavior and insights derived from the exploratory data analysis. For example, earlier findings showed senior citizens and customers without dependents may be more likely to churn.
+
+```{r}
+dt_fit <- workflow() %>%
+  add_recipe(model_recipe) %>%
+  add_model(dt_mod) %>%
+  fit(data = retention_train)
+```
+After specifying the model and recipe, we train the decision tree using the training dataset. This initial model helps us understand the relationships between demographic variables and churn. It sets the stage for further refinement through hyperparameter tuning to improve performance.
+
+```{r}
+set.seed(123)
+kfold <- vfold_cv(retention_train, v = 5, strata = "Status")
+
+dt_results <- fit_resamples(
+  dt_mod,
+  model_recipe,
+  resamples = kfold,
+  metrics = metric_set(accuracy, roc_auc)
+)
+
+collect_metrics(dt_results)
+```
+
+To assess the model’s reliability, we perform 5-fold cross-validation and evaluate metrics such as accuracy and ROC AUC. The initial decision tree achieved an accuracy of 73.4% during cross-validation, consistent with earlier models. However, the ROC AUC of 0.5 suggests it is not yet effective at distinguishing between churners and non-churners.
+
+```{r}
+dt_mod_tuned <- decision_tree(
+  mode = "classification",
+  cost_complexity = tune(),
+  tree_depth = tune(),
+  min_n = tune()
+) %>%
+  set_engine("rpart")
+
+dt_hyper_grid <- grid_regular(
+  cost_complexity(),
+  tree_depth(),
+  min_n(),
+  levels = 5
+)
+
+set.seed(123)
+dt_tuned_results <- tune_grid(
+  dt_mod_tuned,
+  model_recipe,
+  resamples = kfold,
+  grid = dt_hyper_grid,
+  metrics = metric_set(accuracy, roc_auc)
+)
+
+dt_best_params <- select_best(dt_tuned_results, metric = "roc_auc")
+show_best(dt_tuned_results, metric = "roc_auc")
+```
+
+To enhance performance, we tune hyperparameters like tree depth, minimum node size, and cost complexity. These parameters control the tree’s size and shape, balancing simplicity and accuracy. 
+
+```{r}
+dt_final_wf <- workflow() %>%
+  add_recipe(model_recipe) %>%
+  add_model(dt_mod_tuned) %>%
+  finalize_workflow(dt_best_params)
+
+dt_final_fit <- dt_final_wf %>%
+  fit(data = retention_train)
+```
+
+This final model captures optimized relationships between demographics and churn. By focusing on tuned parameters, we achieve a balance between interpretability and predictive accuracy.
+
+```{r}
+dt_predictions <- predict(dt_final_fit, new_data = retention_test, type = "prob") %>%
+  bind_cols(predict(dt_final_fit, new_data = retention_test, type = "class")) %>%
+  bind_cols(retention_test)
+
+confusion <- dt_predictions %>%
+  conf_mat(truth = Status, estimate = .pred_class)
+confusion
+```
+
+We evaluate the tuned model on the test dataset, focusing on accuracy and the confusion matrix to assess its ability to predict churn. The model correctly predicted churn for 69 customers who left but misclassified 488 churners as current customers (false negatives). These misclassifications emphasize the need for additional strategies to minimize churn predictions' business impact.
+
+```{r}
+dt_final_fit %>%
+  extract_fit_parsnip() %>%
+  vip(10) +
+  labs(
+    title = "Top Demographic Features Influencing Churn",
+    x = "Feature",
+    y = "Importance"
+  )
+```
+
+After finalizing the decision tree model, we identified the most influential demographic factors associated with churn:
+
+* Dependents: Customers without dependents are significantly more likely to churn, suggesting a need for personalized retention strategies for individuals.
+* Senior Citizen: Senior citizens show a higher likelihood of churn, possibly reflecting dissatisfaction with service features or pricing.
+* Partner: Customers without partners are at greater risk of leaving, indicating opportunities for campaigns tailored to single customers.
+* Gender: Gender had minimal impact on churn, consistent with earlier demographic analysis.
+These insights allow Regork Telecom to develop group-specific retention strategies. By proactively addressing the needs of senior citizens or customers without dependents, the company can prevent churn while maintaining a focus on high-risk groups identified earlier.
+
+### Potential Revenue Loss from Predicted Churn by Demographic
