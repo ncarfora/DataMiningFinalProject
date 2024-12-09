@@ -19,6 +19,7 @@ Here are the packages used in our analysis, including a short description of eac
 * pdp: For creating partial dependence plots.
 * kernlab: For kernel-based methods.
 * ggplot2: For data visualization.
+
 ```{r, message = FALSE, warning = FALSE}
 # Loading Required Libraries
   library(tidymodels)
@@ -75,8 +76,13 @@ unique(customer_retention$StreamingMovies)
 unique(customer_retention$Contract)
 unique(customer_retention$PaperlessBilling)
 ```
+
 We split the dataset into training (70%) and test (30%) sets, ensuring stratified sampling to maintain the balance of Status in both sets.
 ```{r}
+# Recode response variable as a factor
+customer_retention <- customer_retention %>%
+  mutate(Status = factor(Status, levels = c("Current", "Left")))
+
 # Splitting the dataset
 set.seed(123)
 retention_split <- initial_split(customer_retention, prop = 0.7, strata = "Status")
