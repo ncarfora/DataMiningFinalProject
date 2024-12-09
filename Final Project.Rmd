@@ -277,7 +277,7 @@ rf_hyper_grid <- grid_regular(
 
 We created a grid of potential hyperparameter values, allowing the model to test various settings for the number of trees, predictors per split, and minimum node size. Optimizing these values ensures the model is both accurate and efficient.
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 set.seed(123)
 rf_results <- tune_grid(
   rf_mod,
