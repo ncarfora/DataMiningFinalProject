@@ -459,3 +459,42 @@ After finalizing the decision tree model, we identified the most influential dem
 These insights allow Regork Telecom to develop group-specific retention strategies. By proactively addressing the needs of senior citizens or customers without dependents, the company can prevent churn while maintaining a focus on high-risk groups identified earlier.
 
 ### Potential Revenue Loss from Predicted Churn by Demographic
+Lastly, this section identifies customers who are predicted to churn and calculates their potential revenue loss. Using monthly charges, we estimate the annual revenue loss per customer
+```{r}
+predicted_churners <- rf_predictions %>%
+  filter(.pred_class == "Left") %>%
+  mutate(RevenueLoss = MonthlyCharges * 12)
+```
+
+We aggregate revenue loss by demographic groups to better understand the financial impact of churn across different segments. This step groups the predicted churners by attributes like dependents, senior citizenship, partnership status, and gender, summarizing total and average revenue loss, as well as the count of customers in each group
+```{r}
+demographic_loss <- predicted_churners %>%
+  group_by(Dependents, SeniorCitizen, Partner, Gender) %>%
+  summarize(
+    TotalRevenueLoss = sum(RevenueLoss, na.rm = TRUE),
+    AvgRevenueLoss = mean(RevenueLoss, na.rm = TRUE),
+    Count = n()
+  ) %>%
+  arrange(desc(TotalRevenueLoss))
+```
+
+The resulting table, displayed below, reveals which demographic groups contribute most to revenue loss. For example, non-senior females without dependents or partners seem to account for the largest share of potential revenue loss, highlighting a priority segment for retention strategies.
+```{r}
+print(demographic_loss)
+```
+
+To better show this, we use a bar chart that breaks down total revenue loss by demographic combinations. The x-axis represents whether customers have dependents, while the bars are grouped and colored by combinations of senior citizenship, partnership status, and gender.
+```{r}
+ggplot(demographic_loss, aes(x = Dependents, y = TotalRevenueLoss, fill = interaction(SeniorCitizen, Partner, Gender))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Potential Revenue Loss by Demographics",
+    x = "Dependents",
+    y = "Total Revenue Loss ($)",
+    fill = "SeniorCitizen-Partner-Gender"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+From the chart, we observe that non-dependent customers, particularly those who are not senior citizens, contribute the majority of potential revenue loss. This insight underscores the importance of tailored retention efforts targeting these high-impact groups.
